@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wellnest/core/router/app_router.dart';
+import 'package:mindpath/core/router/app_router.dart';
 
 void main() {
   runApp(const MyApp());
