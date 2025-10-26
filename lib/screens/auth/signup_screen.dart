@@ -48,6 +48,12 @@ class _SignupScreenState extends State<SignupScreen> {
       );
 
       if (user != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Kayıt başarılı! Hoş geldiniz.'),
+            backgroundColor: Colors.green,
+          ),
+        );
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const MainNavigation()),
         );
@@ -55,7 +61,11 @@ class _SignupScreenState extends State<SignupScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Kayıt başarısız: ${e.toString()}')),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     } finally {
@@ -99,13 +109,15 @@ class _SignupScreenState extends State<SignupScreen> {
                     decoration: const InputDecoration(
                       labelText: 'E-posta',
                       prefixIcon: Icon(Icons.email_outlined),
+                      hintText: 'ornek@email.com',
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'E-posta gerekli';
                       }
-                      if (!value.contains('@')) {
-                        return 'Geçerli bir e-posta girin';
+                      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                      if (!emailRegex.hasMatch(value)) {
+                        return 'Geçerli bir e-posta adresi girin';
                       }
                       return null;
                     },
@@ -243,6 +255,12 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (user != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Giriş başarılı! Hoş geldiniz.'),
+            backgroundColor: Colors.green,
+          ),
+        );
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const MainNavigation()),
         );
@@ -250,7 +268,11 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Giriş başarısız: ${e.toString()}')),
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     } finally {
@@ -287,16 +309,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 40),
 
+                  // Email Field
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
                     decoration: const InputDecoration(
                       labelText: 'E-posta',
                       prefixIcon: Icon(Icons.email_outlined),
+                      hintText: 'ornek@email.com',
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'E-posta gerekli';
+                      }
+                      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                      if (!emailRegex.hasMatch(value)) {
+                        return 'Geçerli bir e-posta adresi girin';
                       }
                       return null;
                     },
@@ -304,6 +332,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 16),
 
+                  // Password Field
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
@@ -329,6 +358,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 32),
 
+                  // Login Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -340,6 +370,65 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text('Giriş Yap'),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Forgot Password Link
+                  Center(
+                    child: TextButton(
+                      onPressed: () async {
+                        if (_emailController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Lütfen e-posta adresinizi girin'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                          return;
+                        }
+
+                        try {
+                          await _authService.resetPassword(_emailController.text.trim());
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Şifre sıfırlama bağlantısı e-postanıza gönderildi'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Hata: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('Şifremi Unuttum'),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Sign Up Link
+                  Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Hesabın yok mu? '),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: const Text('Kayıt Ol'),
+                        ),
+                      ],
                     ),
                   ),
                 ],

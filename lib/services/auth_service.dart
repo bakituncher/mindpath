@@ -40,9 +40,22 @@ class AuthService {
         return userModel;
       }
       return null;
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'email-already-in-use':
+          throw 'Bu e-posta adresi zaten kullanılıyor';
+        case 'invalid-email':
+          throw 'Geçersiz e-posta adresi';
+        case 'operation-not-allowed':
+          throw 'E-posta/şifre girişi etkin değil';
+        case 'weak-password':
+          throw 'Şifre çok zayıf. En az 6 karakter kullanın';
+        default:
+          throw 'Kayıt sırasında bir hata oluştu: ${e.message}';
+      }
     } catch (e) {
       print('Sign up error: $e');
-      rethrow;
+      throw 'Kayıt işlemi başarısız. Lütfen tekrar deneyin';
     }
   }
 
@@ -65,9 +78,26 @@ class AuthService {
         }
       }
       return null;
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          throw 'Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı';
+        case 'wrong-password':
+          throw 'Yanlış şifre. Lütfen tekrar deneyin';
+        case 'invalid-email':
+          throw 'Geçersiz e-posta adresi';
+        case 'user-disabled':
+          throw 'Bu hesap devre dışı bırakılmış';
+        case 'too-many-requests':
+          throw 'Çok fazla başarısız deneme. Lütfen daha sonra tekrar deneyin';
+        case 'invalid-credential':
+          throw 'E-posta veya şifre hatalı';
+        default:
+          throw 'Giriş sırasında bir hata oluştu: ${e.message}';
+      }
     } catch (e) {
       print('Sign in error: $e');
-      rethrow;
+      throw 'Giriş işlemi başarısız. Lütfen tekrar deneyin';
     }
   }
 
@@ -78,7 +108,20 @@ class AuthService {
 
   // Reset password
   Future<void> resetPassword(String email) async {
-    await _auth.sendPasswordResetEmail(email: email);
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'invalid-email':
+          throw 'Geçersiz e-posta adresi';
+        case 'user-not-found':
+          throw 'Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı';
+        default:
+          throw 'Şifre sıfırlama hatası: ${e.message}';
+      }
+    } catch (e) {
+      throw 'Şifre sıfırlama işlemi başarısız. Lütfen tekrar deneyin';
+    }
   }
 
   // Get user data

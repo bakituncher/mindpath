@@ -29,14 +29,20 @@ class UserModel {
       email: json['email'] ?? '',
       displayName: json['displayName'],
       photoURL: json['photoURL'],
-      goals: List<String>.from(json['goals'] ?? []),
+      goals: (json['goals'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       selectedExam: json['selectedExam'],
-      createdAt: DateTime.parse(json['createdAt']),
-      lastActiveAt: json['lastActiveAt'] != null
+      createdAt: json['createdAt'] is String
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
+      lastActiveAt: json['lastActiveAt'] != null && json['lastActiveAt'] is String
           ? DateTime.parse(json['lastActiveAt'])
           : null,
-      preferences: UserPreferences.fromJson(json['preferences'] ?? {}),
-      stats: UserStats.fromJson(json['stats'] ?? {}),
+      preferences: json['preferences'] is Map<String, dynamic>
+          ? UserPreferences.fromJson(json['preferences'])
+          : UserPreferences(),
+      stats: json['stats'] is Map<String, dynamic>
+          ? UserStats.fromJson(json['stats'])
+          : UserStats(),
     );
   }
 
@@ -148,8 +154,8 @@ class UserStats {
       totalJournalEntries: json['totalJournalEntries'] ?? 0,
       currentStreak: json['currentStreak'] ?? 0,
       longestStreak: json['longestStreak'] ?? 0,
-      completedCourses: List<String>.from(json['completedCourses'] ?? []),
-      earnedBadges: List<String>.from(json['earnedBadges'] ?? []),
+      completedCourses: (json['completedCourses'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      earnedBadges: (json['earnedBadges'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
     );
   }
 
