@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class UserModel {
   final String id;
   final String email;
@@ -24,6 +26,13 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    DateTime parseDateTime(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is String) return DateTime.parse(value);
+      if (value is Timestamp) return value.toDate();
+      return DateTime.now();
+    }
+
     return UserModel(
       id: json['id'] ?? '',
       email: json['email'] ?? '',
@@ -31,12 +40,8 @@ class UserModel {
       photoURL: json['photoURL'],
       goals: (json['goals'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
       selectedExam: json['selectedExam'],
-      createdAt: json['createdAt'] is String
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
-      lastActiveAt: json['lastActiveAt'] != null && json['lastActiveAt'] is String
-          ? DateTime.parse(json['lastActiveAt'])
-          : null,
+      createdAt: parseDateTime(json['createdAt']),
+      lastActiveAt: json['lastActiveAt'] != null ? parseDateTime(json['lastActiveAt']) : null,
       preferences: json['preferences'] is Map<String, dynamic>
           ? UserPreferences.fromJson(json['preferences'])
           : UserPreferences(),

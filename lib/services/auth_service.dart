@@ -78,6 +78,15 @@ class AuthService {
             final data = doc.data()!;
             // ID'yi data'ya ekle
             data['id'] = credential.user!.uid;
+
+            // Timestamp'leri String'e dönüştür
+            if (data['createdAt'] is Timestamp) {
+              data['createdAt'] = (data['createdAt'] as Timestamp).toDate().toIso8601String();
+            }
+            if (data['lastActiveAt'] is Timestamp) {
+              data['lastActiveAt'] = (data['lastActiveAt'] as Timestamp).toDate().toIso8601String();
+            }
+
             return UserModel.fromJson(data);
           }
         } catch (parseError) {
@@ -155,6 +164,15 @@ class AuthService {
         final data = doc.data()!;
         // ID'yi data'ya ekle
         data['id'] = uid;
+
+        // Timestamp'leri String'e dönüştür
+        if (data['createdAt'] is Timestamp) {
+          data['createdAt'] = (data['createdAt'] as Timestamp).toDate().toIso8601String();
+        }
+        if (data['lastActiveAt'] is Timestamp) {
+          data['lastActiveAt'] = (data['lastActiveAt'] as Timestamp).toDate().toIso8601String();
+        }
+
         return UserModel.fromJson(data);
       }
       return null;

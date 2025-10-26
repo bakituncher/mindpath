@@ -2,56 +2,45 @@ import 'package:flutter/material.dart';
 import 'package:mindpath/core/constants/app_colors.dart';
 import 'package:mindpath/services/auth_service.dart';
 import 'package:mindpath/screens/home/main_navigation.dart';
-import 'package:mindpath/screens/auth/login_screen.dart';
+import 'package:mindpath/screens/onboarding/goal_selection_screen.dart';
 
-class SignupScreen extends StatefulWidget {
-  final List<String> selectedGoals;
-  final double assessmentScore;
-
-  const SignupScreen({
-    super.key,
-    required this.selectedGoals,
-    required this.assessmentScore,
-  });
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _signup() async {
+  Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      final user = await _authService.signUpWithEmail(
+      final user = await _authService.signInWithEmail(
         _emailController.text.trim(),
         _passwordController.text,
-        goals: widget.selectedGoals,
       );
 
       if (user != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Kayıt başarılı! Hoş geldiniz.'),
+            content: Text('Giriş başarılı! Hoş geldiniz.'),
             backgroundColor: Colors.green,
           ),
         );
@@ -74,6 +63,39 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
+  Future<void> _resetPassword() async {
+    if (_emailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lütfen e-posta adresinizi girin'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      await _authService.resetPassword(_emailController.text.trim());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Şifre sıfırlama bağlantısı e-postanıza gönderildi'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -89,15 +111,23 @@ class _SignupScreenState extends State<SignupScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 40),
+                  // Back Button
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back),
+                    onPressed: () => Navigator.of(context).pop(),
+                    padding: EdgeInsets.zero,
+                    alignment: Alignment.centerLeft,
+                  ),
+
+                  const SizedBox(height: 20),
 
                   Text(
-                    'Hesap Oluştur',
+                    'Tekrar Hoş Geldin',
                     style: Theme.of(context).textTheme.displaySmall,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Yolculuğuna başlamak için son adım',
+                    'Farkındalık yolculuğuna devam et',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
 
@@ -146,70 +176,56 @@ class _SignupScreenState extends State<SignupScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Şifre gerekli';
                       }
-                      if (value.length < 6) {
-                        return 'Şifre en az 6 karakter olmalı';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Confirm Password Field
-                  TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: _obscureConfirmPassword,
-                    decoration: InputDecoration(
-                      labelText: 'Şifre Tekrar',
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscureConfirmPassword
-                            ? Icons.visibility_off
-                            : Icons.visibility),
-                        onPressed: () {
-                          setState(() =>
-                              _obscureConfirmPassword = !_obscureConfirmPassword);
-                        },
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value != _passwordController.text) {
-                        return 'Şifreler eşleşmiyor';
-                      }
                       return null;
                     },
                   ),
 
                   const SizedBox(height: 32),
 
-                  // Sign Up Button
+                  // Login Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _signup,
+                      onPressed: _isLoading ? null : _login,
                       child: _isLoading
                           ? const SizedBox(
                               height: 20,
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Kayıt Ol'),
+                          : const Text('Giriş Yap'),
                     ),
                   ),
 
                   const SizedBox(height: 16),
 
-                  // Login Link
+                  // Forgot Password Link
                   Center(
                     child: TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(
-                            builder: (_) => const LoginScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text('Zaten hesabın var mı? Giriş Yap'),
+                      onPressed: _resetPassword,
+                      child: const Text('Şifremi Unuttum'),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Sign Up Link
+                  Center(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text('Hesabın yok mu? '),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (_) => const GoalSelectionScreen(),
+                              ),
+                            );
+                          },
+                          child: const Text('Kayıt Ol'),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -221,5 +237,4 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 }
-
 
