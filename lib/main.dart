@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:mindpath/firebase_options.dart';
 import 'package:mindpath/core/theme/app_theme.dart';
 import 'package:mindpath/core/constants/app_strings.dart';
 import 'package:mindpath/screens/onboarding/welcome_screen.dart';
@@ -12,7 +13,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Initialize Notifications
   await NotificationService().initialize();
