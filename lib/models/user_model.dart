@@ -132,6 +132,7 @@ class UserStats {
   final int totalMeditationMinutes;
   final int totalBreathingSessions;
   final int totalJournalEntries;
+  final int totalSleepMinutes;
   final int currentStreak;
   final int longestStreak;
   final List<String> completedCourses;
@@ -141,6 +142,7 @@ class UserStats {
     this.totalMeditationMinutes = 0,
     this.totalBreathingSessions = 0,
     this.totalJournalEntries = 0,
+    this.totalSleepMinutes = 0,
     this.currentStreak = 0,
     this.longestStreak = 0,
     this.completedCourses = const [],
@@ -152,6 +154,7 @@ class UserStats {
       totalMeditationMinutes: json['totalMeditationMinutes'] ?? 0,
       totalBreathingSessions: json['totalBreathingSessions'] ?? 0,
       totalJournalEntries: json['totalJournalEntries'] ?? 0,
+      totalSleepMinutes: json['totalSleepMinutes'] ?? 0,
       currentStreak: json['currentStreak'] ?? 0,
       longestStreak: json['longestStreak'] ?? 0,
       completedCourses: (json['completedCourses'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
@@ -164,6 +167,7 @@ class UserStats {
       'totalMeditationMinutes': totalMeditationMinutes,
       'totalBreathingSessions': totalBreathingSessions,
       'totalJournalEntries': totalJournalEntries,
+      'totalSleepMinutes': totalSleepMinutes,
       'currentStreak': currentStreak,
       'longestStreak': longestStreak,
       'completedCourses': completedCourses,

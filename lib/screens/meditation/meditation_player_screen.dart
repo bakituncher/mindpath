@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mindpath/core/constants/app_colors.dart';
 import 'package:mindpath/models/meditation_model.dart';
 import 'package:mindpath/services/audio_player_service.dart';
+import 'package:mindpath/services/ambient_audio_service.dart';
 import 'dart:async';
 
 class MeditationPlayerScreen extends StatefulWidget {

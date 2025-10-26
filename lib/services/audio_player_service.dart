@@ -9,9 +9,37 @@ class AudioPlayerService {
   Stream<Duration> get positionStream => _audioPlayer.positionStream;
   Stream<PlayerState> get playerStateStream => _audioPlayer.playerStateStream;
 
+  // Playback state stream (true = playing, false = paused/stopped)
+  Stream<bool> get playbackStateStream => _audioPlayer.playingStream;
+
+  // Completion stream
+  Stream<bool> get completionStream => _audioPlayer.processingStateStream.map(
+    (state) => state == ProcessingState.completed,
+  );
+
   bool get isPlaying => _audioPlayer.playing;
   Duration? get duration => _audioPlayer.duration;
   Duration get position => _audioPlayer.position;
+
+  // Initialize with URL
+  Future<void> initialize(String url) async {
+    try {
+      await _audioPlayer.setUrl(url);
+    } catch (e) {
+      print('Error initializing audio: $e');
+      rethrow;
+    }
+  }
+
+  // Play
+  Future<void> play() async {
+    try {
+      await _audioPlayer.play();
+    } catch (e) {
+      print('Error playing audio: $e');
+      rethrow;
+    }
+  }
 
   // Play audio from URL
   Future<void> playFromUrl(String url) async {
@@ -85,31 +113,4 @@ class AudioPlayerService {
   }
 }
 
-// Background audio service for ambient sounds
-class AmbientAudioService {
-  final AudioPlayer _ambientPlayer = AudioPlayer();
-
-  Future<void> playAmbient(String assetPath, {double volume = 0.3}) async {
-    try {
-      await _ambientPlayer.setAsset(assetPath);
-      await _ambientPlayer.setVolume(volume);
-      await _ambientPlayer.setLoopMode(LoopMode.one);
-      await _ambientPlayer.play();
-    } catch (e) {
-      print('Error playing ambient: $e');
-    }
-  }
-
-  Future<void> stopAmbient() async {
-    await _ambientPlayer.stop();
-  }
-
-  Future<void> setAmbientVolume(double volume) async {
-    await _ambientPlayer.setVolume(volume.clamp(0.0, 1.0));
-  }
-
-  void dispose() {
-    _ambientPlayer.dispose();
-  }
-}
 

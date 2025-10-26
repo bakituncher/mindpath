@@ -1,37 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:mindpath/core/constants/app_colors.dart';
+import 'package:mindpath/services/sleep_service.dart';
+import 'package:mindpath/models/sleep_story_model.dart';
+import 'package:shimmer/shimmer.dart';
 
 class SleepStoriesScreen extends StatelessWidget {
   const SleepStoriesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final stories = [
-      SleepStory(
-        id: '1',
-        title: 'Ay Işığında Göl Kenarı',
-        description: 'Sakin bir göl kenarında huzurlu bir gece yolculuğu',
-        duration: 25,
-        narrator: 'Kadın Ses',
-        imageUrl: null,
-      ),
-      SleepStory(
-        id: '2',
-        title: 'Orman Yürüyüşü',
-        description: 'Yeşil bir ormanda yavaş ve sakin bir yürüyüş',
-        duration: 30,
-        narrator: 'Erkek Ses',
-        imageUrl: null,
-      ),
-      SleepStory(
-        id: '3',
-        title: 'Deniz Kıyısında Günbatımı',
-        description: 'Dalgaların sesiyle birlikte huzurlu bir akşam',
-        duration: 20,
-        narrator: 'Kadın Ses',
-        imageUrl: null,
-      ),
-    ];
+    final sleepService = SleepService();
 
     return Scaffold(
       body: Container(
@@ -69,13 +47,68 @@ class SleepStoriesScreen extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(24),
-                  itemCount: stories.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    final story = stories[index];
-                    return SleepStoryCard(story: story);
+                child: StreamBuilder<List<SleepStoryModel>>(
+                  stream: sleepService.getAllSleepStories(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return _buildLoadingShimmer();
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: AppColors.white.withOpacity(0.5),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Hikayeler yüklenirken hata oluştu',
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: AppColors.white,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final stories = snapshot.data ?? [];
+
+                    if (stories.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.nightlight_round,
+                              size: 64,
+                              color: AppColors.white.withOpacity(0.5),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Henüz uyku hikayesi bulunmuyor',
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    color: AppColors.white,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(24),
+                      itemCount: stories.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 16),
+                      itemBuilder: (context, index) {
+                        final story = stories[index];
+                        return SleepStoryCard(story: story);
+                      },
+                    );
                   },
                 ),
               ),
@@ -85,28 +118,31 @@ class SleepStoriesScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-class SleepStory {
-  final String id;
-  final String title;
-  final String description;
-  final int duration;
-  final String narrator;
-  final String? imageUrl;
-
-  SleepStory({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.duration,
-    required this.narrator,
-    this.imageUrl,
-  });
+  Widget _buildLoadingShimmer() {
+    return ListView.separated(
+      padding: const EdgeInsets.all(24),
+      itemCount: 3,
+      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: AppColors.white.withOpacity(0.1),
+          highlightColor: AppColors.white.withOpacity(0.3),
+          child: Container(
+            height: 160,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }
 
 class SleepStoryCard extends StatelessWidget {
-  final SleepStory story;
+  final SleepStoryModel story;
 
   const SleepStoryCard({super.key, required this.story});
 
@@ -153,7 +189,7 @@ class SleepStoryCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${story.duration} dk • ${story.narrator}',
+                      '${story.durationMinutes} dk • ${story.narrator}',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.white.withOpacity(0.7),
                           ),
@@ -175,7 +211,11 @@ class SleepStoryCard extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () {
-                // Play sleep story
+                Navigator.pushNamed(
+                  context,
+                  '/sleep-player',
+                  arguments: story,
+                );
               },
               icon: const Icon(Icons.play_arrow),
               label: const Text('Dinle'),

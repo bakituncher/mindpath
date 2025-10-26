@@ -68,13 +68,36 @@ class AuthService {
       );
 
       if (credential.user != null) {
-        final doc = await _firestore
-            .collection('users')
-            .doc(credential.user!.uid)
-            .get();
+        try {
+          final doc = await _firestore
+              .collection('users')
+              .doc(credential.user!.uid)
+              .get();
 
-        if (doc.exists) {
-          return UserModel.fromJson(doc.data()!);
+          if (doc.exists && doc.data() != null) {
+            final data = doc.data()!;
+            // ID'yi data'ya ekle
+            data['id'] = credential.user!.uid;
+            return UserModel.fromJson(data);
+          }
+        } catch (parseError) {
+          print('User data parse error: $parseError');
+          // Eğer kullanıcı verisi yoksa veya parse edilemiyorsa, yeni bir UserModel oluştur
+          final newUser = UserModel(
+            id: credential.user!.uid,
+            email: email,
+            createdAt: DateTime.now(),
+            preferences: UserPreferences(),
+            stats: UserStats(),
+          );
+
+          // Firestore'a kaydet
+          await _firestore
+              .collection('users')
+              .doc(credential.user!.uid)
+              .set(newUser.toJson());
+
+          return newUser;
         }
       }
       return null;
@@ -128,8 +151,11 @@ class AuthService {
   Future<UserModel?> getUserData(String uid) async {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
-      if (doc.exists) {
-        return UserModel.fromJson(doc.data()!);
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        // ID'yi data'ya ekle
+        data['id'] = uid;
+        return UserModel.fromJson(data);
       }
       return null;
     } catch (e) {

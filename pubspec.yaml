@@ -77,6 +77,7 @@ dependencies:
 
   # AI & ML
   google_generative_ai: ^0.2.1
+  flutter_dotenv: ^5.1.0
 
   # PDF
   pdf: ^3.10.7
@@ -113,7 +114,9 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - .env
     - assets/images/
+    - assets/audio/
     - assets/audio/meditations/
     - assets/audio/breathing/
     - assets/audio/sleep_stories/

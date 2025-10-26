@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:mindpath/core/constants/app_colors.dart';
+import 'package:mindpath/services/ai_coach_service.dart';
+import 'package:mindpath/services/auth_service.dart';
+import 'package:mindpath/services/journal_service.dart';
+import 'package:mindpath/models/user_model.dart';
+import 'package:mindpath/models/journal_model.dart';
 
 class AiCoachScreen extends StatefulWidget {
   const AiCoachScreen({super.key});
@@ -12,16 +18,56 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final List<ChatMessage> _messages = [];
+  final AICoachService _aiService = AICoachService();
+  final AuthService _authService = AuthService();
+  final JournalService _journalService = JournalService();
+
+  UserModel? _currentUser;
+  List<JournalEntry> _recentJournalEntries = [];
+  bool _isLoading = false;
+  bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
-    // Initial greeting
-    _messages.add(ChatMessage(
-      text: 'Merhaba! Ben senin kişisel farkındalık asistanınım. Bugün sana nasıl yardımcı olabilirim?',
-      isUser: false,
-      timestamp: DateTime.now(),
-    ));
+    _initializeChat();
+  }
+
+  Future<void> _initializeChat() async {
+    try {
+      final userId = _authService.currentUser?.uid;
+      if (userId != null) {
+        _currentUser = await _authService.getUserData(userId);
+
+        final now = DateTime.now();
+        final sevenDaysAgo = now.subtract(const Duration(days: 7));
+
+        await for (var entries in _journalService.getUserJournalEntries(userId)) {
+          _recentJournalEntries = entries
+              .where((e) => e.createdAt.isAfter(sevenDaysAgo))
+              .take(7)
+              .toList();
+          break;
+        }
+      }
+
+      _messages.add(ChatMessage(
+        text: _currentUser != null
+            ? 'Merhaba ${_currentUser!.displayName ?? 'sevgili dostum'}! 👋\n\nBen senin kişisel farkındalık koçunum. Hedeflerine ve duygusal yolculuğuna göre sana özel destek sunuyorum. Bugün sana nasıl yardımcı olabilirim?'
+            : 'Merhaba! Ben senin kişisel farkındalık asistanınım. Bugün sana nasıl yardımcı olabilirim?',
+        isUser: false,
+        timestamp: DateTime.now(),
+      ));
+
+      setState(() {
+        _isInitializing = false;
+      });
+    } catch (e) {
+      print('Initialize chat error: $e');
+      setState(() {
+        _isInitializing = false;
+      });
+    }
   }
 
   @override
@@ -31,55 +77,70 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
     super.dispose();
   }
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
+  Future<void> _sendMessage() async {
+    if (_messageController.text.trim().isEmpty || _isLoading) return;
 
+    final userMessageText = _messageController.text.trim();
     final userMessage = ChatMessage(
-      text: _messageController.text,
+      text: userMessageText,
       isUser: true,
       timestamp: DateTime.now(),
     );
 
     setState(() {
       _messages.add(userMessage);
+      _isLoading = true;
     });
-
-    // Simulate AI response
-    _simulateAIResponse(userMessage.text);
 
     _messageController.clear();
     _scrollToBottom();
+
+    await _getAIResponse(userMessageText);
   }
 
-  void _simulateAIResponse(String userMessage) {
-    // Simple keyword-based responses
-    String response = '';
+  Future<void> _getAIResponse(String userMessage) async {
+    try {
+      if (_currentUser == null) {
+        throw Exception('Kullanıcı bulunamadı');
+      }
 
-    if (userMessage.toLowerCase().contains('kaygı') ||
-        userMessage.toLowerCase().contains('stres')) {
-      response = 'Kaygı hissetmek normaldir. Hadi birlikte kısa bir nefes alalım. '
-          '4-7-8 nefes tekniğini denemek ister misin?';
-    } else if (userMessage.toLowerCase().contains('uyku')) {
-      response = 'Uyku sorunu yaşıyorsun. Sana uyku öncesi gevşeme meditasyonu önerebilirim. '
-          'Ayrıca uyku hikayelerimize göz atabilirsin.';
-    } else if (userMessage.toLowerCase().contains('odaklan')) {
-      response = 'Odaklanma konusunda yardımcı olabilirim. 2 dakikalık odak meditasyonu '
-          'veya Box Breathing tekniği sana iyi gelebilir.';
-    } else {
-      response = 'Anlıyorum. Her duygu geçerlidir ve kabul edilmeye değerdir. '
-          'Bu duyguyla bir süre kalmaya ne dersin?';
-    }
+      final chatHistory = _messages
+          .where((m) => m != _messages.last)
+          .map((m) => {
+                'role': m.isUser ? 'user' : 'model',
+                'content': m.text,
+              })
+          .toList();
 
-    Future.delayed(const Duration(milliseconds: 1000), () {
+      final response = await _aiService.sendMessage(
+        userMessage,
+        user: _currentUser!,
+        recentEntries: _recentJournalEntries,
+        chatHistory: chatHistory,
+      );
+
       setState(() {
         _messages.add(ChatMessage(
           text: response,
           isUser: false,
           timestamp: DateTime.now(),
         ));
+        _isLoading = false;
+      });
+
+      _scrollToBottom();
+    } catch (e) {
+      print('AI response error: $e');
+      setState(() {
+        _messages.add(ChatMessage(
+          text: 'Özür dilerim, şu anda bir bağlantı sorunu yaşıyorum. Lütfen tekrar dener misin? 🙏',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+        _isLoading = false;
       });
       _scrollToBottom();
-    });
+    }
   }
 
   void _scrollToBottom() {
@@ -111,20 +172,22 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
       ),
       body: Column(
         children: [
-          // Messages
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return MessageBubble(message: message);
-              },
-            ),
+            child: _isInitializing
+                ? _buildLoadingShimmer()
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length + (_isLoading ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == _messages.length && _isLoading) {
+                        return _buildTypingIndicator();
+                      }
+                      final message = _messages[index];
+                      return MessageBubble(message: message);
+                    },
+                  ),
           ),
-
-          // Quick Actions
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: SingleChildScrollView(
@@ -142,8 +205,6 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
               ),
             ),
           ),
-
-          // Input Field
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -199,6 +260,7 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
     return GestureDetector(
       onTap: () {
         _messageController.text = text;
+        _sendMessage();
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -212,6 +274,108 @@ class _AiCoachScreenState extends State<AiCoachScreen> {
           style: const TextStyle(color: AppColors.darkGray),
         ),
       ),
+    );
+  }
+
+  Widget _buildLoadingShimmer() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: List.generate(3, (index) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey[300]!,
+              highlightColor: Colors.grey[100]!,
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Container(
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.pastelGreen.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.psychology,
+              size: 20,
+              color: AppColors.pastelGreen,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.lightGray.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildTypingDot(0),
+                const SizedBox(width: 4),
+                _buildTypingDot(1),
+                const SizedBox(width: 4),
+                _buildTypingDot(2),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypingDot(int index) {
+    return TweenAnimationBuilder(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 600),
+      builder: (context, double value, child) {
+        return Opacity(
+          opacity: (value + index * 0.3) % 1.0,
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: AppColors.mediumGray,
+              shape: BoxShape.circle,
+            ),
+          ),
+        );
+      },
+      onEnd: () {
+        if (mounted) setState(() {});
+      },
     );
   }
 }
@@ -265,10 +429,8 @@ class MessageBubble extends StatelessWidget {
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(20),
                   topRight: const Radius.circular(20),
-                  bottomLeft:
-                      Radius.circular(message.isUser ? 20 : 4),
-                  bottomRight:
-                      Radius.circular(message.isUser ? 4 : 20),
+                  bottomLeft: Radius.circular(message.isUser ? 20 : 4),
+                  bottomRight: Radius.circular(message.isUser ? 4 : 20),
                 ),
               ),
               child: Text(
