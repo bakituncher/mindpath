@@ -1,0 +1,21 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "audio": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "images": {
+      ".read": "auth != null",
+      ".write": false
+    },
+    "user_recordings": {
+      "$uid": {
+        ".read": "auth.uid == $uid",
+        ".write": "auth.uid == $uid"
+      }
+    }
+  }
+}
+
